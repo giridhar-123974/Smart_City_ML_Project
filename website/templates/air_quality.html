@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Air Quality Prediction - Smart City ML{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-wind"></i> Air Quality Prediction
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="airForm">
+                    {% for i in range(10) %}
+                    <div class="mb-3">
+                        <label for="feature_{{ i }}" class="form-label">Sensor {{ i + 1 }} Reading</label>
+                        <input type="number" class="form-control" id="feature_{{ i }}" name="feature_{{ i }}" value="50" step="0.1" required>
+                    </div>
+                    {% endfor %}
+
+                    <button type="submit" class="btn btn-info w-100">
+                        <i class="fas fa-spinner fa-spin" id="loadingSpinner" style="display:none;"></i>
+                        <span id="buttonText">Predict</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow-sm" id="resultCard" style="display:none;">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar"></i> Air Quality Index (AQI)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <h2 id="aqiValue" class="mb-3"></h2>
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div id="aqiBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="resultMessage" class="alert mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Air Quality Levels</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2"><span class="badge bg-success">0-50</span> Good</li>
+                    <li class="mb-2"><span class="badge bg-warning">51-100</span> Moderate</li>
+                    <li class="mb-2"><span class="badge bg-danger">101-150</span> Unhealthy for Sensitive</li>
+                    <li class="mb-2"><span class="badge bg-danger">151-200</span> Unhealthy</li>
+                    <li><span class="badge bg-dark">201+</span> Very Unhealthy</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('airForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const buttonText = document.getElementById('buttonText');
+    buttonText.style.display = 'none';
+    loadingSpinner.style.display = 'inline-block';
+
+    const data = {};
+    for (let i = 0; i < 10; i++) {
+        data[`feature_${i}`] = parseFloat(document.getElementById(`feature_${i}`).value);
+    }
+
+    try {
+        const response = await fetch('{{ url_for("api.predict_air_quality") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            displayAirResult(result);
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    } finally {
+        loadingSpinner.style.display = 'none';
+        buttonText.style.display = 'inline-block';
+    }
+});
+
+function displayAirResult(result) {
+    const aqi = result.aqi;
+    const resultCard = document.getElementById('resultCard');
+    const aqiValue = document.getElementById('aqiValue');
+    const aqiBar = document.getElementById('aqiBar');
+    const resultMessage = document.getElementById('resultMessage');
+
+    aqiValue.textContent = Math.round(aqi);
+
+    let message = '', badgeClass = '';
+    if (aqi <= 50) {
+        message = 'Air quality is good. Enjoy outdoor activities!';
+        badgeClass = 'success';
+    } else if (aqi <= 100) {
+        message = 'Air quality is moderate. Sensitive groups may experience minor effects.';
+        badgeClass = 'warning';
+    } else if (aqi <= 150) {
+        message = 'Air quality is unhealthy for sensitive groups. Everyone else is unaffected.';
+        badgeClass = 'danger';
+    } else if (aqi <= 200) {
+        message = 'Air quality is unhealthy. Everyone may experience health effects.';
+        badgeClass = 'danger';
+    } else {
+        message = 'Air quality is very unhealthy. Avoid outdoor activities.';
+        badgeClass = 'dark';
+    }
+
+    aqiBar.style.width = Math.min(aqi, 300) / 3 + '%';
+    aqiBar.className = `progress-bar bg-${badgeClass}`;
+    resultMessage.textContent = message;
+    resultMessage.className = `alert alert-${badgeClass}`;
+
+    resultCard.style.display = 'block';
+}
+</script>
+{% endblock %}

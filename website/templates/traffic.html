@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Traffic Prediction - Smart City ML{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-traffic-light"></i> Traffic Prediction
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="trafficForm">
+                    <div class="mb-3">
+                        <label for="hour" class="form-label">Hour (0-23)</label>
+                        <input type="number" class="form-control" id="hour" name="hour" min="0" max="23" value="12" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="day_of_week" class="form-label">Day of Week (0-6)</label>
+                        <select class="form-control" id="day_of_week" name="day_of_week" required>
+                            <option value="0">Monday</option>
+                            <option value="1">Tuesday</option>
+                            <option value="2">Wednesday</option>
+                            <option value="3">Thursday</option>
+                            <option value="4">Friday</option>
+                            <option value="5">Saturday</option>
+                            <option value="6">Sunday</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="vehicle_count" class="form-label">Vehicle Count</label>
+                        <input type="number" class="form-control" id="vehicle_count" name="vehicle_count" min="0" value="50" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="avg_speed" class="form-label">Average Speed (km/h)</label>
+                        <input type="number" class="form-control" id="avg_speed" name="avg_speed" min="0" max="120" value="60" step="0.1" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="weather" class="form-label">Weather Condition</label>
+                        <select class="form-control" id="weather" name="weather" required>
+                            <option value="0">Sunny</option>
+                            <option value="1">Rainy</option>
+                            <option value="2">Foggy</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-spinner fa-spin" id="loadingSpinner" style="display:none;"></i>
+                        <span id="buttonText">Predict</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow-sm" id="resultCard" style="display:none;">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar"></i> Prediction Result
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <h2 id="predictionLabel" class="mb-3"></h2>
+                    <div id="congestionLevel" style="font-size: 48px; margin: 20px 0;"></div>
+                    <p>Confidence: <strong id="confidenceScore"></strong></p>
+                    <div id="resultMessage" class="alert mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mt-3" id="historyCard" style="display:none;">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history"></i> Your Predictions
+                </h5>
+            </div>
+            <div class="card-body" id="historyBody">
+                <p class="text-muted">Loading history...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('trafficForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const buttonText = document.getElementById('buttonText');
+    buttonText.style.display = 'none';
+    loadingSpinner.style.display = 'inline-block';
+
+    const data = {
+        hour: parseInt(document.getElementById('hour').value),
+        day_of_week: parseInt(document.getElementById('day_of_week').value),
+        vehicle_count: parseInt(document.getElementById('vehicle_count').value),
+        avg_speed: parseFloat(document.getElementById('avg_speed').value),
+        weather: parseInt(document.getElementById('weather').value)
+    };
+
+    try {
+        const response = await fetch('{{ url_for("api.predict_traffic") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            displayTrafficResult(result);
+            loadTrafficHistory();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    } finally {
+        loadingSpinner.style.display = 'none';
+        buttonText.style.display = 'inline-block';
+    }
+});
+
+function displayTrafficResult(result) {
+    const labels = ['🟢 Low Congestion', '🟡 Medium Congestion', '🔴 High Congestion'];
+    const icons = ['✓', '⚠️', '❌'];
+    const colors = ['success', 'warning', 'danger'];
+
+    const resultCard = document.getElementById('resultCard');
+    const predictionLabel = document.getElementById('predictionLabel');
+    const congestionLevel = document.getElementById('congestionLevel');
+    const confidenceScore = document.getElementById('confidenceScore');
+    const resultMessage = document.getElementById('resultMessage');
+
+    predictionLabel.textContent = labels[result.prediction];
+    congestionLevel.textContent = icons[result.prediction];
+    confidenceScore.innerHTML = `${(result.confidence * 100).toFixed(2)}%`;
+    
+    resultMessage.textContent = `Based on the current conditions, traffic is expected to be ${result.label.toLowerCase()}.`;
+    resultMessage.className = `alert alert-${colors[result.prediction]}`;
+
+    resultCard.style.display = 'block';
+}
+
+async function loadTrafficHistory() {
+    try {
+        const response = await fetch('{{ url_for("api.get_history", prediction_type="traffic") }}');
+        const data = await response.json();
+
+        const historyCard = document.getElementById('historyCard');
+        const historyBody = document.getElementById('historyBody');
+
+        if (data.data && data.data.length > 0) {
+            let html = '<div class="list-group">';
+            data.data.slice(0, 5).forEach(pred => {
+                const date = new Date(pred.created_at);
+                html += `
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>${['Low', 'Medium', 'High'][pred.result]}</span>
+                            <small class="text-muted">${date.toLocaleDateString()}</small>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            historyBody.innerHTML = html;
+            historyCard.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error loading history:', error);
+    }
+}
+</script>
+{% endblock %}

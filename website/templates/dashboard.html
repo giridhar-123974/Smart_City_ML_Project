@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Smart City ML{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-chart-line"></i> Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Total Predictions</h6>
+                        <h2 class="mb-0">{{ total_predictions }}</h2>
+                    </div>
+                    <i class="fas fa-chart-pie fa-3x opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Traffic</h6>
+                        <h2 class="mb-0">{{ traffic_count }}</h2>
+                    </div>
+                    <i class="fas fa-traffic-light fa-3x opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Air Quality</h6>
+                        <h2 class="mb-0">{{ air_count }}</h2>
+                    </div>
+                    <i class="fas fa-wind fa-3x opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Energy</h6>
+                        <h2 class="mb-0">{{ energy_count }}</h2>
+                    </div>
+                    <i class="fas fa-bolt fa-3x opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('main.traffic') }}" class="card h-100 text-decoration-none text-reset">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-traffic-light fa-3x mb-3 text-success"></i>
+                <h5 class="card-title">Traffic Prediction</h5>
+                <p class="card-text">Predict traffic congestion</p>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('main.air_quality') }}" class="card h-100 text-decoration-none text-reset">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-wind fa-3x mb-3 text-info"></i>
+                <h5 class="card-title">Air Quality</h5>
+                <p class="card-text">Check air quality index</p>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('main.energy') }}" class="card h-100 text-decoration-none text-reset">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-bolt fa-3x mb-3 text-warning"></i>
+                <h5 class="card-title">Energy</h5>
+                <p class="card-text">Predict energy consumption</p>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Recent Predictions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history"></i> Recent Predictions
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_predictions %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Result</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pred in recent_predictions %}
+                            <tr>
+                                <td>
+                                    {% if pred.prediction_type == 'traffic' %}
+                                    <span class="badge bg-success">Traffic</span>
+                                    {% elif pred.prediction_type == 'air_quality' %}
+                                    <span class="badge bg-info">Air Quality</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">Energy</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ "%.2f"|format(pred.prediction_result) }}</td>
+                                <td>{{ pred.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">No predictions yet. Start by making a prediction!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

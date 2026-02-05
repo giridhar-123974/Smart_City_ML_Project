@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Energy Prediction - Smart City ML{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt"></i> Energy Consumption Prediction
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="energyForm">
+                    <div class="mb-3">
+                        <label for="feature_0" class="form-label">Temperature (°C)</label>
+                        <input type="number" class="form-control" id="feature_0" name="feature_0" value="20" step="0.1" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="feature_1" class="form-label">Humidity (%)</label>
+                        <input type="number" class="form-control" id="feature_1" name="feature_1" value="60" min="0" max="100" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="feature_2" class="form-label">Time of Day (0-23)</label>
+                        <input type="number" class="form-control" id="feature_2" name="feature_2" value="12" min="0" max="23" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="feature_3" class="form-label">Building Load (kW)</label>
+                        <input type="number" class="form-control" id="feature_3" name="feature_3" value="100" min="0" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="feature_4" class="form-label">Usage Factor (0-1)</label>
+                        <input type="number" class="form-control" id="feature_4" name="feature_4" value="0.8" min="0" max="1" step="0.1" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="fas fa-spinner fa-spin" id="loadingSpinner" style="display:none;"></i>
+                        <span id="buttonText">Predict</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow-sm" id="resultCard" style="display:none;">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar"></i> Energy Consumption Forecast
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <h2 id="energyValue" class="mb-3"></h2>
+                    <p class="lead">kilowatt-hours (kWh)</p>
+                    <div id="resultMessage" class="alert mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Energy Consumption Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li>Lower temperature reduces HVAC energy consumption</li>
+                    <li>Peak hours (9-5) typically have higher usage</li>
+                    <li>Good humidity control (40-60%) improves efficiency</li>
+                    <li>Load distribution helps prevent peak demand charges</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('energyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const buttonText = document.getElementById('buttonText');
+    buttonText.style.display = 'none';
+    loadingSpinner.style.display = 'inline-block';
+
+    const data = {};
+    for (let i = 0; i < 5; i++) {
+        data[`feature_${i}`] = parseFloat(document.getElementById(`feature_${i}`).value);
+    }
+
+    try {
+        const response = await fetch('{{ url_for("api.predict_energy") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            displayEnergyResult(result);
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    } finally {
+        loadingSpinner.style.display = 'none';
+        buttonText.style.display = 'inline-block';
+    }
+});
+
+function displayEnergyResult(result) {
+    const consumption = result.consumption_kwh;
+    const resultCard = document.getElementById('resultCard');
+    const energyValue = document.getElementById('energyValue');
+    const resultMessage = document.getElementById('resultMessage');
+
+    energyValue.textContent = consumption.toFixed(2);
+
+    let message = '', badgeClass = '';
+    if (consumption < 100) {
+        message = '✓ Low consumption. Great energy efficiency!';
+        badgeClass = 'success';
+    } else if (consumption < 200) {
+        message = '→ Moderate consumption. Room for optimization.';
+        badgeClass = 'info';
+    } else if (consumption < 300) {
+        message = '⚠ Higher consumption. Consider energy-saving measures.';
+        badgeClass = 'warning';
+    } else {
+        message = '❌ Very high consumption. Immediate optimization recommended.';
+        badgeClass = 'danger';
+    }
+
+    resultMessage.textContent = message;
+    resultMessage.className = `alert alert-${badgeClass}`;
+
+    resultCard.style.display = 'block';
+}
+</script>
+{% endblock %}

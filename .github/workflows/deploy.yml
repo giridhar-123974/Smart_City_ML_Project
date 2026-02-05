@@ -1,0 +1,34 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to Heroku
+      uses: AkhileshNS/heroku-deploy@v3.12.12
+      with:
+        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+        heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+        heroku_email: ${{ secrets.HEROKU_EMAIL }}
+        appdir: "."
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    - name: Deploy to AWS (Optional)
+      run: |
+        echo "Configure AWS deployment in your AWS account"
+        echo "This can use CloudFormation, ECS, or Lambda"
+      if: false
+    
+    - name: Send deployment notification
+      run: |
+        echo "Deployment completed successfully!"
+        echo "API: https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com"
+        echo "Dashboard: https://${{ secrets.HEROKU_APP_NAME }}-dashboard.herokuapp.com"
