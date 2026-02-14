@@ -14,7 +14,6 @@ echo Starting Streamlit Dashboard...
 echo Dashboard will open at: http://localhost:8501
 echo.
 
-cd Smart_City_ML_Project
-streamlit run dashboard/app.py
+venv\Scripts\streamlit run dashboard/app.py
 
 pause

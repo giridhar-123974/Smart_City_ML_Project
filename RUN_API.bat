@@ -22,7 +22,6 @@ echo.
 echo API will be available at: http://localhost:8000/api/docs
 echo.
 
-cd Smart_City_ML_Project
-python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+venv\Scripts\python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 
 pause

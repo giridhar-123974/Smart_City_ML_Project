@@ -2,9 +2,14 @@ import streamlit as st
 import joblib
 import numpy as np
 
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR = os.path.join(BASE_DIR, '..', 'models')
+
 # Load trained models
-air_model = joblib.load("../models/air_quality_random_forest.pkl")
-traffic_model = joblib.load("../models/traffic_random_forest.pkl")
+air_model = joblib.load(os.path.join(MODELS_DIR, "air_quality_random_forest.pkl"))
+traffic_model = joblib.load(os.path.join(MODELS_DIR, "traffic_random_forest.pkl"))
 
 # Page settings
 st.set_page_config(
